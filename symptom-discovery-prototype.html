@@ -313,8 +313,8 @@ function render(){
   if (r.outcome === "escalation"){
     resultEl.innerHTML = traceHTML(r.trace) + `
       <div class="escalation">
-        <h2>Please don't wait on this</h2>
-        <p>Based on what you searched, this could need urgent attention. We're not going to show product results here — please contact your pharmacist now, or reach out to a doctor.</p>
+        <h2>This needs a pharmacist or doctor, not a product list</h2>
+        <p>What you've described is best assessed by a professional rather than an online search. Please reach out to a pharmacist, or a doctor if you'd feel more comfortable.</p>
         <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b><br>Medical emergency: <b>112</b></div>
       </div>
       <div class="callout"><b>Design decision</b>Hard-coded, non-probabilistic safety check — a false negative here is a safety failure, not a UX inconvenience. Tone is deliberately calm and factual, aligned with HWG §11's ban on fear-inducing disease framing, not just a UX preference.</div>
