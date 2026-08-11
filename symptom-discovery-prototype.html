@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redcare — Symptom-to-Product Discovery (Prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-900:#0B2E2C; --teal-700:#0B4F4A; --teal-500:#146B63; --teal-100:#E4EEEC;
+    --brick-700:#8A2A1F; --brick-500:#B33A2C; --brick-100:#F6E4E1;
+    --sage-700:#4C6B5A; --sage-500:#7A9C87; --sage-100:#E7F0EA;
+    --ink:#1B2422; --ink-soft:#5B6864; --paper:#FBFAF7; --paper-raised:#FFFFFF;
+    --line:#DCE2DF;
+    --serif:'Fraunces', Georgia, serif;
+    --sans:'IBM Plex Sans', -apple-system, sans-serif;
+    --mono:'IBM Plex Mono', 'SF Mono', monospace;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+    line-height:1.5;
+  }
+  .app{max-width:760px; margin:0 auto; padding:32px 20px 80px;}
+  header.top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; gap:12px; flex-wrap:wrap;}
+  .brand{font-family:var(--serif); font-weight:600; font-size:1.5rem; color:var(--teal-900); letter-spacing:-0.01em;}
+  .brand small{display:block; font-family:var(--sans); font-weight:500; font-size:0.7rem; color:var(--ink-soft); letter-spacing:.06em; text-transform:uppercase; margin-top:2px;}
+  .scope-note{font-size:0.72rem; color:var(--ink-soft); font-family:var(--mono); background:var(--teal-100); border:1px solid var(--teal-500); border-radius:999px; padding:4px 12px; white-space:nowrap;}
+
+  h1.headline{font-family:var(--serif); font-weight:500; font-size:1.9rem; color:var(--teal-900); margin:28px 0 6px; line-height:1.2;}
+  p.sub{color:var(--ink-soft); margin:0 0 22px; font-size:0.98rem;}
+
+  .search-row{display:flex; gap:10px; margin-bottom:14px;}
+  #q{flex:1; font-family:var(--sans); font-size:1.05rem; padding:14px 16px; border:2px solid var(--teal-900); border-radius:10px; outline:none; background:var(--paper-raised);}
+  #q:focus{box-shadow:0 0 0 3px var(--teal-100);}
+  button.go{font-family:var(--sans); font-weight:600; font-size:1rem; background:var(--teal-900); color:#fff; border:none; border-radius:10px; padding:0 22px; cursor:pointer;}
+  button.go:hover{background:var(--teal-700);}
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:36px;}
+  .chip-group{width:100%; margin-bottom:2px;}
+  .chip-group-label{font-family:var(--mono); font-size:0.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:10px 0 6px;}
+  .chip{font-family:var(--mono); font-size:0.78rem; background:var(--paper-raised); border:1px solid var(--line); color:var(--ink); padding:6px 11px; border-radius:999px; cursor:pointer;}
+  .chip:hover{border-color:var(--teal-500); color:var(--teal-700);}
+  .chip.rf{border-color:var(--brick-500); color:var(--brick-700);}
+  .chip.hwg{border-color:var(--sage-700); color:var(--sage-700);}
+
+  section#result{display:none;}
+  .trace-panel{background:var(--teal-900); color:#DCEAE7; border-radius:var(--radius); padding:16px 18px; margin-bottom:20px; font-family:var(--mono); font-size:0.82rem;}
+  .trace-panel .trace-title{text-transform:uppercase; letter-spacing:.08em; font-size:0.68rem; color:#9FC6C0; margin-bottom:10px;}
+  .trace-line{display:flex; gap:10px; padding:6px 0; border-top:1px solid rgba(255,255,255,0.12);}
+  .trace-line:first-of-type{border-top:none;}
+  .trace-layer{flex-shrink:0; color:#6FD3C7; font-weight:500;}
+  .trace-text{color:#DCEAE7;}
+  .trace-text b{color:#fff;}
+
+  .callout{font-family:var(--sans); font-size:0.82rem; color:var(--teal-700); background:var(--teal-100); border-left:3px solid var(--teal-500); border-radius:0 8px 8px 0; padding:10px 14px; margin:14px 0;}
+  .callout b{display:block; font-size:0.68rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; color:var(--teal-900);}
+
+  .panel{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius); padding:22px; margin-bottom:16px;}
+  .panel h2{font-family:var(--serif); font-weight:500; font-size:1.3rem; margin:0 0 4px; color:var(--teal-900);}
+  .panel p.desc{color:var(--ink-soft); margin:0 0 16px; font-size:0.92rem;}
+
+  .product-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:520px){.product-grid{grid-template-columns:1fr;}}
+  .product-card{border:1px solid var(--line); border-radius:10px; padding:14px;}
+  .product-card .name{font-weight:600; font-size:0.94rem; margin-bottom:2px;}
+  .product-card .pzn{font-family:var(--mono); font-size:0.72rem; color:var(--ink-soft);}
+
+  .escape-hatch{margin-top:14px; font-size:0.85rem;}
+  .escape-hatch button{font-family:var(--sans); font-size:0.85rem; background:none; border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; color:var(--ink-soft);}
+  .escape-hatch button:hover{border-color:var(--teal-500); color:var(--teal-700);}
+
+  .nudge{display:flex; gap:10px; background:var(--sage-100); border:1px solid var(--sage-500); border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:0.88rem; color:var(--sage-700);}
+  .nudge b{color:var(--teal-900);}
+
+  .escalation{background:var(--brick-100); border:1px solid var(--brick-500); border-radius:var(--radius); padding:26px;}
+  .escalation h2{font-family:var(--serif); font-weight:500; color:var(--brick-700); margin:0 0 10px; font-size:1.4rem;}
+  .escalation p{color:var(--ink); margin:0 0 12px; font-size:0.98rem;}
+  .escalation .contact{font-family:var(--mono); font-size:0.9rem; background:#fff; border-radius:8px; padding:12px 14px; border:1px solid var(--brick-500);}
+
+  .referral{background:var(--sage-100); border:1px solid var(--sage-700); border-radius:var(--radius); padding:26px;}
+  .referral h2{font-family:var(--serif); font-weight:500; color:var(--sage-700); margin:0 0 10px; font-size:1.4rem;}
+  .referral p{color:var(--ink); margin:0 0 12px; font-size:0.98rem;}
+  .referral .contact{font-family:var(--mono); font-size:0.9rem; background:#fff; border-radius:8px; padding:12px 14px; border:1px solid var(--sage-700);}
+
+  .rx{background:var(--teal-100); border:1px solid var(--teal-500); border-radius:var(--radius); padding:26px;}
+  .rx h2{font-family:var(--serif); font-weight:500; color:var(--teal-900); margin:0 0 10px; font-size:1.4rem;}
+  .rx p{color:var(--ink); margin:0 0 12px; font-size:0.98rem;}
+  .rx .contact{font-family:var(--mono); font-size:0.9rem; background:#fff; border-radius:8px; padding:12px 14px; border:1px solid var(--teal-500);}
+
+  .qa{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius); padding:22px;}
+  .qa .qlabel{font-family:var(--mono); font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:6px;}
+  .qa h2{font-family:var(--serif); font-weight:500; font-size:1.25rem; margin:0 0 18px; color:var(--teal-900);}
+  .options{display:flex; flex-direction:column; gap:8px;}
+  .opt{text-align:left; font-family:var(--sans); font-size:0.95rem; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:12px 14px; cursor:pointer;}
+  .opt:hover{border-color:var(--teal-500); background:var(--teal-100);}
+
+  button.reset{margin-top:22px; font-family:var(--sans); font-size:0.85rem; background:none; border:none; color:var(--ink-soft); text-decoration:underline; cursor:pointer; padding:0;}
+
+  footer{margin-top:48px; padding-top:16px; border-top:1px solid var(--line); font-size:0.74rem; color:var(--ink-soft); font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">Redcare<small>Symptom Discovery — Prototype</small></div>
+    <div class="scope-note">Scoped to Germany · Rx-enabled market</div>
+  </header>
+
+  <h1 class="headline">What's going on?</h1>
+  <p class="sub">Describe a symptom, or search a product name — try one of the examples below, or type your own.</p>
+
+  <div class="search-row">
+    <input id="q" type="text" placeholder="e.g. &quot;I can't sleep&quot; or &quot;ibuprofen&quot;" autocomplete="off">
+    <button class="go" onclick="runSearch()">Search</button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <section id="result"></section>
+
+  <footer>
+    Prototype for Redcare case study · Not a real product, no medical claims made · routing logic is fully client-side and deterministic
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   DATA — 52-phrase routing taxonomy across 5 cascade layers
+   ============================================================ */
+
+const REDFLAG = [
+  "chest pain","can't breathe","severe chest pressure","intestinal bleeding",
+  "blood in stool","coughing up blood","sudden numbness on one side",
+  "worst headache of my life","can't stay conscious","throat swelling can't swallow"
+];
+
+const CATALOGUE = [
+  {q:"ibuprofen", name:"Ibuprofen 400mg", pzn:"04837261", cat:"Pain & Fever Relief"},
+  {q:"paracetamol", name:"Paracetamol 500mg", pzn:"01958374", cat:"Pain & Fever Relief"},
+  {q:"vitamin d", name:"Vitamin D3 1000 IU", pzn:"02847193", cat:"Vitamins & Supplements"},
+  {q:"aspirin", name:"Aspirin 500mg", pzn:"03019485", cat:"Pain Relief"},
+  {q:"loratadine", name:"Loratadine 10mg", pzn:"05621748", cat:"Allergy Relief"},
+  {q:"omeprazole", name:"Omeprazole 20mg", pzn:"04456123", cat:"Digestive Health"},
+  {q:"melatonin", name:"Melatonin 1mg", pzn:"06732841", cat:"Sleep Support"},
+  {q:"magnesium", name:"Magnesium 400mg", pzn:"07829364", cat:"Vitamins & Supplements"},
+  {q:"xylometazoline", name:"Xylometazoline Nasal Spray", pzn:"08192736", cat:"Cold & Congestion"},
+  {q:"voltaren", name:"Voltaren Gel", pzn:"09384756", cat:"Muscle & Joint Care"}
+];
+
+const SHORT_SYMPTOM = [
+  {q:"headache", cat:"Pain Relief", products:[["Ibuprofen 400mg","04837261"],["Paracetamol 500mg","01958374"]]},
+  {q:"sunburn", cat:"After-Sun & Skin Soothing", products:[["Aloe Vera After-Sun Gel","01122334"],["Panthenol Spray","02233445"]]},
+  {q:"hay fever", cat:"Allergy & Hay Fever", products:[["Loratadine 10mg","05621748"],["Cetirizine 10mg","03344556"]]},
+  {q:"sore throat", cat:"Throat & Cough Care", products:[["Throat Lozenges","04455667"],["Sage Throat Spray","05566778"]]},
+  {q:"heartburn", cat:"Digestive & Heartburn Relief", products:[["Omeprazole 20mg","04456123"],["Antacid Chewables","06677889"]]},
+  {q:"constipation", cat:"Digestive Support", products:[["Fibre Supplement","07788990"],["Gentle Laxative","08899001"]]},
+  {q:"cold sore", cat:"Cold Sore Treatment", products:[["Aciclovir Cream","09900112"],["Cold Sore Patch","01011223"]]},
+  {q:"athlete's foot", cat:"Antifungal Foot Care", products:[["Antifungal Cream","02122334"],["Foot Powder","03233445"]]},
+  {q:"mild cough", cat:"Cough & Cold", products:[["Cough Syrup","04344556"],["Herbal Cough Drops","05455667"]]},
+  {q:"dry skin", cat:"Moisturizing & Skin Care", products:[["Urea Body Lotion","06566778"],["Fragrance-Free Cream","07677889"]]}
+];
+
+/* long-form + ambiguous: resolved via guided flow.
+   bucket → shared Q2 + resolvedCategory + products
+   hwg: true → HWG Annex A-flagged, always referral-only, never a product
+   rx: true  → candidate for the Rx-outcome path when duration = "2weeks+" */
+const BUCKETS = {
+  sleep:     {q2:"Is it mainly trouble falling asleep, or waking up during the night?", cat:"Sleep Support", products:[["Melatonin 1mg","06732841"],["Valerian Root Tablets","01199223"]]},
+  joint:     {q2:"Is it worse in the morning, or after activity?", cat:"Joint & Muscle Care", products:[["Voltaren Gel","09384756"],["Magnesium 400mg","07829364"]]},
+  digestive: {q2:"Is it linked to specific meals, or fairly constant?", cat:"Digestive Health", products:[["Omeprazole 20mg","04456123"],["Probiotic Capsules","02200334"]]},
+  skin:      {q2:"Is the area spreading, or staying about the same size?", cat:"Skin Care", products:[["Fragrance-Free Cream","07677889"],["Hydrocortisone 1%","03300445"]]},
+  mood:      {q2:"Is this affecting your sleep or daily routine?", cat:"Stress & Relaxation Support", products:[["Valerian Root Tablets","01199223"],["Magnesium 400mg","07829364"]]},
+  general:   {q2:"Where in the body do you feel this most?", cat:"General Wellbeing", products:[["Multivitamin","04411556"],["Hydration Electrolytes","05522667"]]},
+  eye:       {q2:"Is it worse indoors, or after screen use?", cat:"Eye Care", products:[["Lubricating Eye Drops","06633778"],["Preservative-Free Drops","07744889"]]},
+  respiratory:{q2:"Do you also have a fever, or feel short of breath?", cat:"Cough & Cold", products:[["Cough Syrup","04344556"],["Herbal Cough Drops","05455667"]]}
+};
+
+const LONGFORM = [
+  {q:"i can't sleep", bucket:"sleep"},
+  {q:"my joints ache in the morning", bucket:"joint"},
+  {q:"i feel tired all the time", bucket:"general"},
+  {q:"my stomach hurts after eating", bucket:"digestive"},
+  {q:"i have a rash that won't go away", bucket:"skin"},
+  {q:"my back hurts when i sit too long", bucket:"joint"},
+  {q:"i get heartburn every night", bucket:"digestive"},
+  {q:"i feel anxious most days", bucket:"mood"},
+  {q:"my skin has been really itchy lately", bucket:"skin"},
+  {q:"i keep getting headaches after work", bucket:"general"},
+  {q:"my throat feels tight when i'm stressed", bucket:"mood"},
+  {q:"i feel dizzy when i stand up quickly", bucket:"general"},
+  {q:"my eyes are dry and irritated", bucket:"eye"},
+  {q:"i've had a cough for weeks that won't clear up", bucket:"respiratory", rx:true},
+  {q:"my knees hurt going up stairs", bucket:"joint"},
+  {q:"i can't stop drinking", bucket:"mood", hwg:{article:"Anlage A Nr. 3 — Suchtkrankheiten (addiction diseases)"}},
+  {q:"this mole has changed shape", bucket:"skin", hwg:{article:"Anlage A Nr. 2 — bösartige Neubildungen (malignant neoplasms)"}}
+];
+
+const AMBIGUOUS = [
+  {q:"pain", bucket:"general"},
+  {q:"tired", bucket:"general"},
+  {q:"stomach", bucket:"digestive"},
+  {q:"skin", bucket:"skin"},
+  {q:"not feeling well", bucket:"general"}
+];
+
+/* ============================================================
+   ROUTING ENGINE — deterministic 5-layer cascade
+   ============================================================ */
+
+function normalize(s){ return s.trim().toLowerCase(); }
+
+function route(raw){
+  const q = normalize(raw);
+  const trace = [];
+
+  // Layer 1 — Safety / red-flag (always checked first, overrides everything)
+  const rf = REDFLAG.find(p => q.includes(p));
+  if (rf){
+    trace.push({layer:1, name:"Safety check", text:`Matched high-risk phrase <b>"${rf}"</b>. Routed to hard-stop escalation — this layer is deterministic and never overridden by anything below it.`});
+    return {outcome:"escalation", trace};
+  }
+
+  // Layer 2 — Catalogue / direct match
+  const cat = CATALOGUE.find(p => q.includes(p.q));
+  if (cat){
+    trace.push({layer:2, name:"Catalogue match", text:`"${raw}" matched a known product/ingredient name. Guidance skipped — routed straight to direct results.`});
+    return {outcome:"direct", trace, item:cat};
+  }
+
+  // Layer 3 — Short-symptom taxonomy
+  const short = SHORT_SYMPTOM.find(p => q === p.q || q.includes(p.q));
+  if (short){
+    trace.push({layer:3, name:"Short-symptom taxonomy", text:`"${raw}" matched a well-known, usually single-cause symptom term. Light-routed directly to <b>${short.cat}</b>, no guided questions.`});
+    return {outcome:"category-light", trace, item:short};
+  }
+
+  // Layer 4 — Long-form / natural-language heuristic classifier
+  const long = LONGFORM.find(p => q === p.q || q.includes(p.q));
+  if (long){
+    trace.push({layer:4, name:"Long-form classifier", text:`Natural-language, first-person query detected. Routed to guided flow (1–2 clarifying questions) before resolving to a category.`});
+    return {outcome:"guided", trace, item:long, raw};
+  }
+
+  // Layer 5 — Ambiguous fallback
+  const amb = AMBIGUOUS.find(p => q === p.q || q.includes(p.q));
+  if (amb){
+    trace.push({layer:5, name:"Ambiguous fallback", text:`Short, under-specified query. Routed to guided flow with broader initial questions.`});
+    return {outcome:"guided", trace, item:amb, raw};
+  }
+
+  // Nothing matched — treat as ambiguous fallback by default
+  trace.push({layer:5, name:"Ambiguous fallback", text:`No lexical rule matched "${raw}". Defaulted to guided flow with broader initial questions rather than guessing.`});
+  return {outcome:"guided", trace, item:{q:raw, bucket:"general"}, raw};
+}
+
+/* ============================================================
+   UI
+   ============================================================ */
+
+const resultEl = document.getElementById("result");
+let state = {};
+
+function buildChips(){
+  const groups = [
+    ["Safety (red-flag)", REDFLAG.slice(0,3), "rf"],
+    ["Catalogue / direct", CATALOGUE.slice(0,3).map(c=>c.q), ""],
+    ["Short symptom", SHORT_SYMPTOM.slice(0,3).map(c=>c.q), ""],
+    ["Long-form", ["i can't sleep","my joints ache in the morning","i've had a cough for weeks that won't clear up"], ""],
+    ["HWG-flagged", ["i can't stop drinking","this mole has changed shape"], "hwg"],
+    ["Ambiguous", AMBIGUOUS.map(c=>c.q), ""]
+  ];
+  const el = document.getElementById("chips");
+  el.innerHTML = groups.map(([label, items, cls]) => `
+    <div class="chip-group">
+      <div class="chip-group-label">${label}</div>
+      ${items.map(i => `<button class="chip ${cls}" onclick="tryQuery('${i.replace(/'/g,"\\'")}')">${i}</button>`).join(" ")}
+    </div>
+  `).join("");
+}
+
+function tryQuery(q){
+  document.getElementById("q").value = q;
+  runSearch();
+}
+
+function runSearch(){
+  const raw = document.getElementById("q").value;
+  if (!raw.trim()) return;
+  const r = route(raw);
+  state = {raw, r};
+  render();
+}
+
+function traceHTML(trace, extra){
+  const lines = trace.map(t => `
+    <div class="trace-line">
+      <div class="trace-layer">L${t.layer}</div>
+      <div class="trace-text"><b>${t.name}</b> — ${t.text}</div>
+    </div>`).join("");
+  const extraLine = extra ? `<div class="trace-line"><div class="trace-layer">→</div><div class="trace-text">${extra}</div></div>` : "";
+  return `<div class="trace-panel"><div class="trace-title">Routing trace</div>${lines}${extraLine}</div>`;
+}
+
+function render(){
+  resultEl.style.display = "block";
+  const {raw, r} = state;
+
+  if (r.outcome === "escalation"){
+    resultEl.innerHTML = traceHTML(r.trace) + `
+      <div class="escalation">
+        <h2>Please don't wait on this</h2>
+        <p>Based on what you searched, this could need urgent attention. We're not going to show product results here — please contact your pharmacist now, or reach out to a doctor.</p>
+        <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b><br>Medical emergency: <b>112</b></div>
+      </div>
+      <div class="callout"><b>Design decision</b>Hard-coded, non-probabilistic safety check — a false negative here is a safety failure, not a UX inconvenience. Tone is deliberately calm and factual, aligned with HWG §11's ban on fear-inducing disease framing, not just a UX preference.</div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "direct"){
+    resultEl.innerHTML = traceHTML(r.trace) + `
+      <div class="panel">
+        <h2>${r.item.cat}</h2>
+        <p class="desc">Direct results for "${raw}"</p>
+        <div class="product-grid">
+          <div class="product-card"><div class="name">${r.item.name}</div><div class="pzn">PZN ${r.item.pzn}</div></div>
+        </div>
+      </div>
+      <div class="callout"><b>Design decision</b>Known product/ingredient names skip guidance entirely — a customer who already knows what they want shouldn't be slowed down by questions designed for people who don't.</div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "category-light"){
+    resultEl.innerHTML = traceHTML(r.trace) + `
+      <div class="panel">
+        <h2>${r.item.cat}</h2>
+        <p class="desc">Common, usually single-cause symptom — routed straight here, no questions asked.</p>
+        <div class="product-grid">
+          ${r.item.products.map(([n,p]) => `<div class="product-card"><div class="name">${n}</div><div class="pzn">PZN ${p}</div></div>`).join("")}
+        </div>
+        <div class="escape-hatch"><button onclick="escapeToGuided('${r.item.q}')">This isn't quite it →</button></div>
+      </div>
+      <div class="callout"><b>Design decision</b>Light routing trusts that well-known, mostly single-cause symptoms don't need interrogation — but the escape hatch matters just as much: it's the release valve for the cases where the light route guessed wrong.</div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "guided"){
+    resultEl.innerHTML = traceHTML(r.trace) + `
+      <div class="qa">
+        <div class="qlabel">Question 1 of 2</div>
+        <h2>How long have you been experiencing this?</h2>
+        <div class="options">
+          <button class="opt" onclick="answerDuration('just')">Just started</button>
+          <button class="opt" onclick="answerDuration('days')">A few days</button>
+          <button class="opt" onclick="answerDuration('2weeks')">More than 2 weeks</button>
+        </div>
+      </div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "guided-q2"){
+    const bucket = BUCKETS[r.item.bucket];
+    resultEl.innerHTML = traceHTML(r.trace) + `
+      <div class="qa">
+        <div class="qlabel">Question 2 of 2</div>
+        <h2>${bucket.q2}</h2>
+        <div class="options">
+          <button class="opt" onclick="resolveGuided('a')">First option</button>
+          <button class="opt" onclick="resolveGuided('b')">Second option</button>
+        </div>
+      </div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "resolved"){
+    const bucket = BUCKETS[r.item.bucket];
+    const nudge = r.duration === "2weeks" ? `
+      <div class="nudge"><span>⚑</span><div><b>This has been going on a while.</b> If it persists much longer, it's worth having a pharmacist take a look — we'll still show you relevant options below, not silence.</div></div>` : "";
+    resultEl.innerHTML = traceHTML(r.trace, r.traceExtra) + nudge + `
+      <div class="panel">
+        <h2>${bucket.cat}</h2>
+        <p class="desc">Based on your answers</p>
+        <div class="product-grid">
+          ${bucket.products.map(([n,p]) => `<div class="product-card"><div class="name">${n}</div><div class="pzn">PZN ${p}</div></div>`).join("")}
+        </div>
+      </div>
+      <div class="callout"><b>Design decision</b>Guided flow resolves to a category, never a single "best product" — the goal is confident narrowing, not false precision about which exact SKU is right for a symptom we've only asked two questions about.</div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "referral"){
+    resultEl.innerHTML = traceHTML(r.trace, r.traceExtra) + `
+      <div class="referral">
+        <h2>This needs a pharmacist or doctor's judgment</h2>
+        <p>This isn't something we can responsibly answer with a product recommendation — please speak with a pharmacist or doctor directly. That's not a limitation of this prototype; it's a deliberate boundary.</p>
+        <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b></div>
+      </div>
+      <div class="callout"><b>Design decision</b>${r.item.hwg.article}. In Germany, advertising referencing this disease category to consumers is legally restricted — so beyond the UX judgment call, there's a real regulatory reason this path never resolves to a confident product answer.</div>
+      ${resetBtn()}`;
+    return;
+  }
+
+  if (r.outcome === "rx"){
+    resultEl.innerHTML = traceHTML(r.trace, r.traceExtra) + `
+      <div class="rx">
+        <h2>This may need a prescription</h2>
+        <p>Based on your answers, this sounds like something a doctor may need to assess and prescribe for — rather than guessing at an OTC product, we'd route you toward getting a prescription.</p>
+        <div class="contact">Start an e-prescription request · or contact your pharmacist: <b>116117</b></div>
+      </div>
+      <div class="callout"><b>Design decision</b>This 4th resolution path only exists because the prototype is scoped to Germany — one of the few Redcare markets with real e-prescription infrastructure. In an OTC-only market this branch wouldn't exist at all.</div>
+      ${resetBtn()}`;
+    return;
+  }
+}
+
+function escapeToGuided(q){
+  const item = LONGFORM.find(l => l.q === q) || {q, bucket:"general"};
+  state.r = {outcome:"guided", trace:[...state.r.trace, {layer:4, name:"Escape hatch", text:`Customer indicated the light category route wasn't right for "${q}" — re-routed into guided flow.`}], item, raw:q};
+  render();
+}
+
+function answerDuration(duration){
+  state.duration = duration;
+  const {item, trace} = state.r;
+
+  if (item.hwg){
+    state.r = {outcome:"referral", trace, item, traceExtra:`Resolution constrained: this query maps to ${item.hwg.article}. Regardless of answers, this always resolves to a professional referral — never a product.`};
+    render();
+    return;
+  }
+
+  state.r = {outcome:"guided-q2", trace, item};
+  render();
+}
+
+function resolveGuided(choice){
+  const {item, trace} = state.r;
+  const duration = state.duration;
+
+  if (item.rx && duration === "2weeks"){
+    state.r = {outcome:"rx", trace, item, traceExtra:`Duration "more than 2 weeks" + respiratory bucket met the Rx-candidate threshold — resolved to the prescription-routing outcome instead of an OTC category.`};
+    render();
+    return;
+  }
+
+  state.r = {outcome:"resolved", trace, item, duration, traceExtra:`Resolved to <b>${BUCKETS[item.bucket].cat}</b> after 2 clarifying questions.`};
+  render();
+}
+
+function resetBtn(){
+  return `<button class="reset" onclick="doReset()">← Start a new search</button>`;
+}
+
+function doReset(){
+  document.getElementById("q").value = "";
+  resultEl.style.display = "none";
+  resultEl.innerHTML = "";
+  state = {};
+  document.getElementById("q").focus();
+}
+
+document.getElementById("q").addEventListener("keydown", e => { if (e.key === "Enter") runSearch(); });
+
+buildChips();
+</script>
+</body>
+</html>
