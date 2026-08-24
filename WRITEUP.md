@@ -1,6 +1,6 @@
 # Symptom-to-Product Discovery — Case Study Write-up
 
-**Prototype:** `symptom-discovery-prototype.html` in this repo — [add the GitHub Pages URL here once deployed]
+**Prototype:** https://emrefisek.github.io/SymptomSearch/
 **Design decisions & diagrams:** see `DESIGN-DECISIONS.md` in this repo.
 
 ---
