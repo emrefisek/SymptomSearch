@@ -173,18 +173,18 @@
 
     <section id="result"></section>
 
-    <button class="metrics-toggle" onclick="toggleMetrics()">📊 View quality metrics (illustrative)</button>
+    <button class="metrics-toggle" onclick="toggleMetrics()">View measured seed-eval results</button>
     <div class="metrics-panel" id="metrics">
-      <div class="m-title">Quality &amp; safety metrics — mocked for this prototype</div>
+      <div class="m-title">Measured seed offline eval — 20 held-out queries</div>
       <div class="metrics-grid">
-        <div class="metric-row guardrail"><span>Missed-escalation rate (guardrail)</span><span class="m-val">0.0% (target)</span></div>
-        <div class="metric-row"><span>Escalation precision</span><span class="m-val">~68%</span></div>
-        <div class="metric-row"><span>Resolution rate (no escalation/referral)</span><span class="m-val">~91%</span></div>
-        <div class="metric-row"><span>Category-match precision (layers 3–5)</span><span class="m-val">~84%</span></div>
-        <div class="metric-row"><span>Guided-flow abandonment</span><span class="m-val">~12%</span></div>
-        <div class="metric-row"><span>Conversion delta vs. direct search</span><span class="m-val">TBD — needs A/B</span></div>
+        <div class="metric-row guardrail"><span>Safety recall (10 queries)</span><span class="m-val">50% — fails</span></div>
+        <div class="metric-row guardrail"><span>Sensitive-topic detection (4 queries)</span><span class="m-val">0% — fails</span></div>
+        <div class="metric-row"><span>Category-match accuracy (6 queries)</span><span class="m-val">50%</span></div>
+        <div class="metric-row"><span>Safety target</span><span class="m-val">Near-zero misses</span></div>
+        <div class="metric-row"><span>Guided-flow abandonment</span><span class="m-val">TBD — online</span></div>
+        <div class="metric-row"><span>Conversion delta vs. baseline</span><span class="m-val">TBD — A/B test</span></div>
       </div>
-      <div class="m-note">These numbers are illustrative, not measured — there's no real traffic behind this prototype. What matters is the <i>shape</i>: a guardrail metric (near-zero tolerance, monitored, never traded off) sitting alongside quality metrics (normal precision/recall trade-offs apply). See the <b>Case Study Write-up</b> tab for a link to <b>EVAL-METHODOLOGY.md</b>, where each of these would actually be built and measured, with worked examples from this taxonomy.</div>
+      <div class="m-note">The safety and sensitive-topic guardrails fail, so this prototype is not production-safe. The 20-row eval is a seed, not a launch dataset. Real-traffic metrics remain TBD; safety regressions would block release, while category quality is optimizable. See <b>EVAL-METHODOLOGY.md</b> for the held-out queries, results, and production-evaluation roadmap.</div>
     </div>
 
     <footer>
@@ -208,16 +208,16 @@
         <tr><th>Layer</th><th>Fires on</th><th>Outcome</th></tr>
         <tr><td>1 — Safety</td><td>Red-flag phrase (e.g. "chest pain")</td><td>Hard-stop escalation — never a product, overrides everything below</td></tr>
         <tr><td>2 — Catalogue</td><td>Known brand/ingredient (e.g. "ibuprofen")</td><td>Direct results, no guidance</td></tr>
-        <tr><td>3 — Short symptom</td><td>Well-known single-cause term (e.g. "sunburn")</td><td>Light category route, escape hatch to guided flow</td></tr>
+        <tr><td>3 — Low-ambiguity self-care</td><td>Relatively low routing ambiguity (e.g. "sunburn")</td><td>Light category route, escape hatch to guided flow</td></tr>
         <tr><td>4 — Long-form</td><td>Natural-language problem (e.g. "I can't sleep")</td><td>Guided flow, 1–2 clarifying questions</td></tr>
         <tr><td>5 — Ambiguous</td><td>Short, under-specified (e.g. "pain")</td><td>Guided flow, broader initial question</td></tr>
       </table>
 
       <p><b>The decision I'm most proud of</b> is this layered cascade, paired with a visible <b>routing-trace panel</b> — every result shows <i>which layer handled the query and why</i>, live on screen, which turns the architecture into something demonstrable rather than only explained. Two real failures on the live Shop Apotheke site motivated it: "Herzinfarkt" (heart attack) resolves straight to products with zero escalation, and "Herzschmerzen" (heart pain — cardiac, muscular, anxiety, or reflux are all plausible) resolves <i>confidently</i> to aspirin instead of asking one question first. That principle got tested against my own build: an early safety layer used only exact-phrase matching, so real phrasing like "my chest feels really tight" fell straight through it. The fix — a second, deliberately high-recall check (risk-area word + risk modifier) that escalates even without an exact match — is now in the prototype, demoable side-by-side with the original list.</p>
 
-      <p><b>The biggest trade-off I made</b> was breadth of taxonomy over depth of questioning — 52 phrases across five categories, but only two clarifying questions per guided flow. Right for demonstrating the architecture, not yet deep enough to trust past a demo. Two further trade-offs worth naming: <i>ranking</i> within a category is illustrative, not real ("Top match"/"Also relevant" labels with a mock rule, since there's no click data to rank against) — and I deliberately didn't tackle attribute extraction (form, dosage, audience embedded in a query) or the commercial question of whether routing customers <i>away</i> from a purchase is net-positive versus today's baseline. That last one needs a real A/B test, not an assumption.</p>
+      <p><b>The biggest trade-off I made</b> was breadth of taxonomy over depth of questioning — 52 phrases across five prototype domains, but only two clarifying questions per guided flow. These are not a complete pharmacy taxonomy. Production needs governed mappings from consumer language through need state, symptom/clinical concept, therapeutic goal/class, ingredient, formulation and eligibility constraints to catalogue product/PZN. Ranking is illustrative, not real, and structured attribute extraction (form, dosage, audience, child vs. adult, and other eligibility constraints) is deliberately out of scope.</p>
 
-      <p><b>What I'd do differently with more time</b> is build the eval pipeline before shipping, and be precise about what kind of metric each number is. Missed-escalation rate is a <i>guardrail</i> — target ~0%, never traded off for a better average elsewhere. Escalation precision, category-match precision, and resolution rate are normal <i>quality</i> metrics, expected to move as the system tunes. Conflating the two is how a safety layer quietly gets weakened for a cleaner dashboard. Full method and worked examples in <a href="https://github.com/emrefisek/SymptomSearch/blob/main/EVAL-METHODOLOGY.md" target="_blank" rel="noopener">EVAL-METHODOLOGY.md</a>.</p>
+      <p><b>The seed offline eval has been built and run</b> against 20 held-out queries. It found 50% safety recall (5/10), 0% sensitive-topic detection (0/4), and 50% category-match accuracy (3/6). I would not ship this implementation. Safety and sensitive-topic detection are release-blocking guardrails, not metrics to trade for conversion; category coverage is a quality metric to improve. The next milestone is clinically reviewed concept-level coverage, adversarial/paraphrase evaluation, and independent safety signals with deterministic overrides, not endlessly adding keywords. A production CI/release gate and a large expert-labeled dataset are still to be built. Full method and results: <a href="https://github.com/emrefisek/SymptomSearch/blob/main/EVAL-METHODOLOGY.md" target="_blank" rel="noopener">EVAL-METHODOLOGY.md</a>.</p>
 
       <p>One scoping choice worth naming: I scoped this to Germany, Redcare's largest market and one of only three where prescription medicines are sold — which justifies a fourth resolution path ("this may need a prescription"). It also grounds the prototype in HWG (Heilmittelwerbegesetz): <b>§12</b> restricts advertising referencing certain diseases (Annex A) to the public, and <b>§11</b> bans fear-inducing disease framing, which is why the escalation screen's tone is deliberately calm and factual. To be precise about weight: the primary reason the two HWG-flagged queries resolve to a referral is clinical judgment, not the statute — I applied the §12 label as a worked example on two terms, not a complete audit or legal conclusion.</p>
     </div>
@@ -354,7 +354,7 @@ function route(raw){
   // Layer 3 — Short-symptom taxonomy
   const short = SHORT_SYMPTOM.find(p => q === p.q || q.includes(p.q));
   if (short){
-    trace.push({layer:3, name:"Short-symptom taxonomy", text:`"${raw}" matched a well-known, usually single-cause symptom term. Light-routed directly to <b>${short.cat}</b>, no guided questions.`});
+    trace.push({layer:3, name:"Low-ambiguity self-care route", text:`"${raw}" matched a relatively low-ambiguity self-care need. Light-routed directly to <b>${short.cat}</b>, with an escape hatch into guided discovery.`});
     return {outcome:"category-light", trace, item:short};
   }
 
@@ -488,14 +488,14 @@ function render(){
     resultEl.innerHTML = traceHTML(r.trace) + `
       <div class="panel">
         <h2>${r.item.cat}</h2>
-        <p class="desc">Common, usually single-cause symptom — routed straight here, no questions asked.</p>
+        <p class="desc">Relatively low-ambiguity self-care route — no questions asked.</p>
         <div class="rank-note">Ranked by: symptom-category relevance, then popularity (mock)</div>
         <div class="product-grid">
           ${productCards(r.item.products)}
         </div>
         <div class="escape-hatch"><button onclick="escapeToGuided('${r.item.q}')">This isn't quite it →</button></div>
       </div>
-      <div class="callout"><b>Design decision</b>Light routing trusts that well-known, mostly single-cause symptoms don't need interrogation — but the escape hatch matters just as much: it's the release valve for the cases where the light route guessed wrong.</div>
+      <div class="callout"><b>Design decision</b>Light routing is for needs with relatively low routing ambiguity, not claims about a single medical cause. The escape hatch is the release valve for cases where the light route is not right.</div>
       ${resetBtn()}`;
     return;
   }
@@ -556,7 +556,7 @@ function render(){
         <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b></div>
       </div>
       <div class="callout"><b>Design decision</b>The primary reason for a referral here is clinical judgment, not a legal one — but this is also one of the taxonomy terms explicitly checked against ${r.item.hwg.article}, which restricts referencing this disease category in consumer-facing advertising in Germany. A useful additional consideration, not the load-bearing one.</div>
-      <div class="callout commercial"><b>Commercial trade-off</b>This path also ends without a purchase. Worth it if it protects trust enough to offset the lost sale — I'd watch whether customers routed here come back within 7–14 days (a sign the referral was the right call) versus dropping off entirely.</div>
+      <div class="callout commercial"><b>Commercial trade-off</b>This path also ends without a purchase. I would compare follow-on return behavior with the baseline, but a return within 7–14 days is only a behavioral signal, not proof that a referral was clinically correct.</div>
       ${resetBtn()}`;
     return;
   }
