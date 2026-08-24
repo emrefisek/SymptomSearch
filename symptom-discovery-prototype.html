@@ -58,6 +58,25 @@
 
   .callout{font-family:var(--sans); font-size:0.82rem; color:var(--teal-700); background:var(--teal-100); border-left:3px solid var(--teal-500); border-radius:0 8px 8px 0; padding:10px 14px; margin:14px 0;}
   .callout b{display:block; font-size:0.68rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; color:var(--teal-900);}
+  .callout.commercial{color:var(--sage-700); background:var(--sage-100); border-left-color:var(--sage-700);}
+  .callout.commercial b{color:var(--sage-700);}
+
+  .rank-badge{display:inline-block; font-family:var(--mono); font-size:0.66rem; text-transform:uppercase; letter-spacing:.04em; padding:2px 8px; border-radius:999px; margin-bottom:6px;}
+  .rank-badge.top{background:var(--teal-100); color:var(--teal-700);}
+  .rank-badge.also{background:var(--paper); color:var(--ink-soft); border:1px solid var(--line);}
+  .rank-note{font-family:var(--mono); font-size:0.7rem; color:var(--ink-soft); margin:-6px 0 14px;}
+
+  .metrics-toggle{font-family:var(--mono); font-size:0.72rem; background:none; border:1px solid var(--line); border-radius:999px; padding:5px 12px; cursor:pointer; color:var(--ink-soft);}
+  .metrics-toggle:hover{border-color:var(--teal-500); color:var(--teal-700);}
+  .metrics-panel{display:none; background:var(--teal-900); color:#DCEAE7; border-radius:var(--radius); padding:18px 20px; margin:14px 0 36px; font-family:var(--mono); font-size:0.8rem;}
+  .metrics-panel.open{display:block;}
+  .metrics-panel .m-title{text-transform:uppercase; letter-spacing:.08em; font-size:0.68rem; color:#9FC6C0; margin-bottom:12px;}
+  .metrics-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 20px;}
+  @media (max-width:520px){.metrics-grid{grid-template-columns:1fr;}}
+  .metric-row{display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.12); padding:6px 0;}
+  .metric-row .m-val{color:#fff; font-weight:500;}
+  .metric-row.guardrail .m-val{color:#F6C6BC;}
+  .metrics-panel .m-note{margin-top:12px; font-family:var(--sans); font-size:0.76rem; color:#B9D6D1;}
 
   .panel{background:var(--paper-raised); border:1px solid var(--line); border-radius:var(--radius); padding:22px; margin-bottom:16px;}
   .panel h2{font-family:var(--serif); font-weight:500; font-size:1.3rem; margin:0 0 4px; color:var(--teal-900);}
@@ -114,6 +133,20 @@
   <h1 class="headline">What's going on?</h1>
   <p class="sub">Describe a symptom, or search a product name — try one of the examples below, or type your own.</p>
 
+  <button class="metrics-toggle" onclick="toggleMetrics()">📊 View quality metrics (illustrative)</button>
+  <div class="metrics-panel" id="metrics">
+    <div class="m-title">Quality &amp; safety metrics — mocked for this prototype</div>
+    <div class="metrics-grid">
+      <div class="metric-row guardrail"><span>Missed-escalation rate (guardrail)</span><span class="m-val">0.0% (target)</span></div>
+      <div class="metric-row"><span>Escalation precision</span><span class="m-val">~68%</span></div>
+      <div class="metric-row"><span>Resolution rate (no escalation/referral)</span><span class="m-val">~91%</span></div>
+      <div class="metric-row"><span>Category-match precision (layers 3–5)</span><span class="m-val">~84%</span></div>
+      <div class="metric-row"><span>Guided-flow abandonment</span><span class="m-val">~12%</span></div>
+      <div class="metric-row"><span>Conversion delta vs. direct search</span><span class="m-val">TBD — needs A/B</span></div>
+    </div>
+    <div class="m-note">These numbers are illustrative, not measured — there's no real traffic behind this prototype. What matters is the <i>shape</i>: a guardrail metric (near-zero tolerance, monitored, never traded off) sitting alongside quality metrics (normal precision/recall trade-offs apply). See <b>EVAL-METHODOLOGY.md</b> in the repo for how each of these would actually be built and measured, with worked examples from this taxonomy.</div>
+  </div>
+
   <div class="search-row">
     <input id="q" type="text" placeholder="e.g. &quot;I can't sleep&quot; or &quot;ibuprofen&quot;" autocomplete="off">
     <button class="go" onclick="runSearch()">Search</button>
@@ -138,6 +171,22 @@ const REDFLAG = [
   "blood in stool","coughing up blood","sudden numbness on one side",
   "worst headache of my life","can't stay conscious","throat swelling can't swallow"
 ];
+
+/* Near-miss safety net: the exact-phrase list above will always miss real
+   phrasing ("my chest feels tight", "pressure building in my chest",
+   "I can't catch my breath"). Safety is the one layer where recall matters
+   more than precision — a false "let's be careful" costs a moment of
+   friction; a false negative costs a real failure. So this is a second,
+   deliberately looser check: a risk-area noun + a risk-modifier, anywhere
+   in the query, escalates even with zero exact-phrase overlap. */
+const RISK_NOUNS = ["chest","breath","breathing","conscious","consciousness","faint","numb","numbness","bleeding","blood","heart"];
+const RISK_MODIFIERS = ["tight","tightness","pressure","crushing","can't","cannot","unable","severe","sudden","heavy","won't stop","wont stop","one side","half","collapse","pass out","passing out","struggling","catch my breath","racing"];
+
+function nearMissRedFlag(q){
+  const noun = RISK_NOUNS.find(n => q.includes(n));
+  const modifier = RISK_MODIFIERS.find(m => q.includes(m));
+  return noun && modifier ? {noun, modifier} : null;
+}
 
 const CATALOGUE = [
   {q:"ibuprofen", name:"Ibuprofen 400mg", pzn:"04837261", cat:"Pain & Fever Relief"},
@@ -225,6 +274,12 @@ function route(raw){
     return {outcome:"escalation", trace};
   }
 
+  const nearMiss = nearMissRedFlag(q);
+  if (nearMiss){
+    trace.push({layer:1, name:"Safety check — near-miss heuristic", text:`No exact red-flag phrase matched, but risk-adjacent language was detected (<b>"${nearMiss.noun}"</b> + <b>"${nearMiss.modifier}"</b>). Escalated anyway: this layer is tuned for recall over precision, so unfamiliar phrasing of a real risk still gets caught instead of falling through to guided flow.`});
+    return {outcome:"escalation", trace, nearMiss:true};
+  }
+
   // Layer 2 — Catalogue / direct match
   const cat = CATALOGUE.find(p => q.includes(p.q));
   if (cat){
@@ -268,6 +323,7 @@ let state = {};
 function buildChips(){
   const groups = [
     ["Safety (red-flag)", REDFLAG.slice(0,3), "rf"],
+    ["Safety (near-miss — not in the exact list)", ["my chest feels really tight","i can't catch my breath","pressure building in my chest"], "rf"],
     ["Catalogue / direct", CATALOGUE.slice(0,3).map(c=>c.q), ""],
     ["Short symptom", SHORT_SYMPTOM.slice(0,3).map(c=>c.q), ""],
     ["Long-form", ["i can't sleep","my joints ache in the morning","i've had a cough for weeks that won't clear up"], ""],
@@ -281,6 +337,22 @@ function buildChips(){
       ${items.map(i => `<button class="chip ${cls}" onclick="tryQuery('${i.replace(/'/g,"\\'")}')">${i}</button>`).join(" ")}
     </div>
   `).join("");
+}
+
+function toggleMetrics(){
+  document.getElementById("metrics").classList.toggle("open");
+}
+
+/* Mock relevance ranking — a real implementation would rank by a blend of
+   symptom-category match strength, click-through history, and stock/price;
+   this just demonstrates that *order* is itself a decision, not only which
+   items appear. First card is framed as the top match, the rest as also-relevant. */
+function productCards(products){
+  return products.map(([n,p], i) => `
+    <div class="product-card">
+      <span class="rank-badge ${i===0 ? 'top' : 'also'}">${i===0 ? 'Top match' : 'Also relevant'}</span>
+      <div class="name">${n}</div><div class="pzn">PZN ${p}</div>
+    </div>`).join("");
 }
 
 function tryQuery(q){
@@ -311,6 +383,7 @@ function render(){
   const {raw, r} = state;
 
   if (r.outcome === "escalation"){
+    const nearMissNote = r.nearMiss ? `<div class="callout"><b>Design decision — near-miss recall</b>This didn't match the curated red-flag phrase list exactly — it was caught by a looser heuristic (risk-area word + risk modifier) that exists specifically because a fixed phrase list will always miss real phrasing. Safety is the one layer where over-triggering is the correct failure mode, not a bug to tune away.</div>` : "";
     resultEl.innerHTML = traceHTML(r.trace) + `
       <div class="escalation">
         <h2>This needs a pharmacist or doctor, not a product list</h2>
@@ -318,6 +391,8 @@ function render(){
         <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b><br>Medical emergency: <b>112</b></div>
       </div>
       <div class="callout"><b>Design decision</b>Hard-coded, non-probabilistic safety check — a false negative here is a safety failure, not a UX inconvenience. Tone is deliberately calm and factual, aligned with HWG §11's ban on fear-inducing disease framing, not just a UX preference.</div>
+      ${nearMissNote}
+      <div class="callout commercial"><b>Commercial trade-off</b>Every escalation is a search session that ends without a purchase. That's an accepted cost here, not an ignored one — in production I'd track a guardrail metric (missed-escalation rate, target ~0%) alongside a quality metric (escalation precision, i.e. how often this path was actually warranted) so over-triggering doesn't quietly become the norm. See EVAL-METHODOLOGY.md.</div>
       ${resetBtn()}`;
     return;
   }
@@ -341,8 +416,9 @@ function render(){
       <div class="panel">
         <h2>${r.item.cat}</h2>
         <p class="desc">Common, usually single-cause symptom — routed straight here, no questions asked.</p>
+        <div class="rank-note">Ranked by: symptom-category relevance, then popularity (mock)</div>
         <div class="product-grid">
-          ${r.item.products.map(([n,p]) => `<div class="product-card"><div class="name">${n}</div><div class="pzn">PZN ${p}</div></div>`).join("")}
+          ${productCards(r.item.products)}
         </div>
         <div class="escape-hatch"><button onclick="escapeToGuided('${r.item.q}')">This isn't quite it →</button></div>
       </div>
@@ -389,8 +465,9 @@ function render(){
       <div class="panel">
         <h2>${bucket.cat}</h2>
         <p class="desc">Based on your answers</p>
+        <div class="rank-note">Ranked by: symptom-category relevance, then popularity (mock)</div>
         <div class="product-grid">
-          ${bucket.products.map(([n,p]) => `<div class="product-card"><div class="name">${n}</div><div class="pzn">PZN ${p}</div></div>`).join("")}
+          ${productCards(bucket.products)}
         </div>
       </div>
       <div class="callout"><b>Design decision</b>Guided flow resolves to a category, never a single "best product" — the goal is confident narrowing, not false precision about which exact SKU is right for a symptom we've only asked two questions about.</div>
@@ -405,7 +482,8 @@ function render(){
         <p>This isn't something we can responsibly answer with a product recommendation — please speak with a pharmacist or doctor directly. That's not a limitation of this prototype; it's a deliberate boundary.</p>
         <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b></div>
       </div>
-      <div class="callout"><b>Design decision</b>${r.item.hwg.article}. In Germany, advertising referencing this disease category to consumers is legally restricted — so beyond the UX judgment call, there's a real regulatory reason this path never resolves to a confident product answer.</div>
+      <div class="callout"><b>Design decision</b>The primary reason for a referral here is clinical judgment, not a legal one — but this is also one of the taxonomy terms explicitly checked against ${r.item.hwg.article}, which restricts referencing this disease category in consumer-facing advertising in Germany. A useful additional consideration, not the load-bearing one.</div>
+      <div class="callout commercial"><b>Commercial trade-off</b>This path also ends without a purchase. Worth it if it protects trust enough to offset the lost sale — I'd watch whether customers routed here come back within 7–14 days (a sign the referral was the right call) versus dropping off entirely.</div>
       ${resetBtn()}`;
     return;
   }
@@ -418,6 +496,7 @@ function render(){
         <div class="contact">Start an e-prescription request · or contact your pharmacist: <b>116117</b></div>
       </div>
       <div class="callout"><b>Design decision</b>This 4th resolution path only exists because the prototype is scoped to Germany — one of the few Redcare markets with real e-prescription infrastructure. In an OTC-only market this branch wouldn't exist at all.</div>
+      <div class="callout commercial"><b>Commercial trade-off</b>This also routes away from an immediate OTC sale toward a slower e-Rx flow. The bet is that a correctly-identified Rx need converts better through the right channel than a wrong OTC guess would — worth validating with real conversion data once this exists in production.</div>
       ${resetBtn()}`;
     return;
   }

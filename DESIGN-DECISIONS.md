@@ -61,6 +61,14 @@ Live on the actual Shop Apotheke site (Redcare's German storefront):
 - **"Herzinfarkt" (heart attack)** resolves directly to standard product results — zero safety escalation. This is exactly the Layer-1 failure mode the safety check exists to prevent.
 - **"Herzschmerzen" (heart pain)** — genuinely ambiguous (cardiac, muscular, anxiety, reflux are all plausible) — resolves *confidently* to aspirin. This is arguably worse than the first failure: picking the riskiest interpretation and answering with false confidence, instead of asking one clarifying question first. It's the direct justification for Layer 3's escape hatch and Layer 4/5's insistence on questions before resolution.
 
+### Safety layer: recall, not precision — and a real fix to an earlier gap
+
+An earlier version of this prototype implemented Layer 1 as pure exact-phrase matching against the ten-item red-flag list — a query either contained "chest pain" verbatim or it didn't. That's a real gap, not a hypothetical one: "my chest feels really tight," "I can't catch my breath," and "pressure building in my chest" all describe exactly the kind of risk the layer exists to catch, and none of them match any exact phrase on the list. A safety layer whose own headline claim is "a false negative here is a safety failure, not a UX inconvenience" cannot be built on the one matching technique with the worst recall characteristics for open-ended phrasing.
+
+The fix is a second, deliberately looser check that runs alongside the exact-phrase list: a **risk-area noun** (chest, breath, heart, conscious, faint, numb, bleeding, blood) co-occurring with a **risk modifier** (tight, pressure, can't, severe, sudden, crushing, one side, pass out, and similar) escalates even with zero exact-phrase overlap. This is explicitly a high-recall, lower-precision net — some queries it catches won't turn out to have needed escalation, and that's the correct trade-off for this one layer specifically. The routing-trace panel labels these separately ("Safety check — near-miss heuristic") so the distinction between "matched the curated list" and "caught by the broader net" stays visible rather than papered over.
+
+This isn't presented as solved. A keyword-cluster heuristic is still lexical, not semantic — it will have both false positives (an anxious "my throat feels tight" style query, if the noun list were drawn too broadly) and blind spots (phrasing that describes real risk without using any listed noun or modifier at all, e.g. "something feels really wrong and I feel cold and clammy"). The honest claim is narrower than "safety is solved": *this specific, previously-demonstrated gap is closed*, and the mechanism generalizes to the next gap that real query data will surface — which is exactly why the eval section below and `EVAL-METHODOLOGY.md` treat missed-escalation rate as a guardrail metric to monitor continuously, not a box to check once.
+
 ## 3. ML / modeling approach
 
 The brief evaluates "ML Collaboration" explicitly, so this section is written the way it would be defended to an ML engineer in the room.
@@ -109,6 +117,8 @@ This is deliberately applied to the taxonomy, not left as an abstract caveat. Th
 - **The real-site "testicular cancer" → etoposide finding** (see below) is a direct Annex A.2 hit layered on top of an existing Rx-only gate — a stronger example than either constraint alone, and the clearest illustration of why this Annex actually matters for taxonomy design, not just tone.
 
 This turns "I'd want legal to confirm which terms are affected" from a hedge into a demonstrated method: two taxonomy phrases were actually audited against Annex A and routed accordingly, not just flagged as a general concern.
+
+**A scoping caveat worth being upfront about:** §12 governs *advertising* — whether a symptom-discovery screen that never names a product for these two queries counts as "advertising referencing a disease" in the statute's sense is itself a question for legal, not something this prototype resolves by asserting it. For both "this mole has changed shape" and "I can't stop drinking," the primary, load-bearing reason for a referral-only outcome is straightforward clinical judgment — neither should resolve to a confident OTC product regardless of what any advertising statute says. HWG §12 is presented here as *additional* grounding that happens to point the same direction, not as the reason the design decision was made. Overstating a legal citation's centrality to a product decision it didn't actually drive is its own credibility risk, worth naming rather than leaving implicit.
 
 ## 6. Additional real-world evidence (from the live Shop Apotheke site)
 
@@ -179,8 +189,38 @@ Key features of this architecture worth being able to explain verbally:
 - The **eval pipeline validates before release**, not after — a gate, not a dashboard.
 - Query logs feed golden-set growth over time — the eval isn't a one-off artifact, it's a living part of the system that connects back to §3's ML approach.
 
-## 10. Open items / honestly unresolved
+## 10. Product discovery: ranking, not just categorization
 
+The brief and the role are both explicitly about *search* — and an earlier version of this prototype under-delivered on that specifically. The cascade decided *which* category or product set to show, but was silent on *order*: every result was an unordered list. For a Search PM, that's the wrong thing to be quiet about — deciding which items appear is only half of product discovery; deciding the order they appear in is the other half, and it's the half with the ranking, relevance, and personalization problems in it.
+
+The prototype now labels the first card in any multi-product result **"Top match"** and the rest **"Also relevant,"** with an explicit `Ranked by: symptom-category relevance, then popularity (mock)` note above the grid. This is deliberately illustrative, not a real ranking model — there's no click data or catalogue behind this prototype to rank against. What it's meant to demonstrate is the *habit*: never present a result set without being able to say why it's ordered the way it is. In a real implementation, the ranking signal for a resolved category would likely blend:
+
+- Category-match confidence from the cascade layer that resolved the query (a Layer-3 light-route match is higher-confidence than a Layer-5 ambiguous-fallback resolution, and that confidence should be visible to the ranker)
+- Historical click-through and reformulation rate within that category — the same structured features proposed for the cascade's own classifier in §3, reused rather than duplicated
+- Stock, price-tier, and any commercial placement rules, kept clearly separate from relevance so the two are never silently conflated
+
+## 11. Commercial trade-offs
+
+Every non-purchase outcome in this cascade — safety escalation, HWG-flagged referral, and Rx-routing — ends a search session without a sale. That's a real cost, not a hand-waved one, and the prototype now says so explicitly: each of those three screens carries a "Commercial trade-off" callout naming what's being given up and what would need to be true for the trade to be worth it (e.g., an escalation is worth its lost conversion if it protects trust; whether it actually does is an empirical question, not an assumption).
+
+The concrete way I'd validate this in production, beyond the eval metrics in §12:
+- **Return-window tracking** on referral and Rx outcomes — did the customer come back within 7–14 days (a signal the redirect was correct) or drop off entirely (a signal it wasn't, or that the experience itself was the problem)?
+- **Escalation precision**, not just recall — the near-miss heuristic in §2 is deliberately tuned for high recall, which means it will over-trigger. That's the correct default for a safety layer, but "correct default" and "free" are different claims — a persistently low escalation-precision number would be a signal to invest in a smarter (still safety-first) Layer 1, not evidence the layer is broken.
+- **A/B testing intent-routing against the current keyword-search baseline** before claiming this is a net-positive feature — the case brief's premise (today's melatonin-heavy results page) is a real UX gap, but "better UX" and "better business outcome" aren't automatically the same conclusion, and a Search PM's job is to hold both.
+
+## 12. Eval & quality metrics
+
+The prototype's header includes a **"View quality metrics"** panel with illustrative numbers (mocked — there's no real traffic behind this build) to make one structural point visible on screen rather than only in prose: **guardrail metrics and quality metrics are not the same kind of number and shouldn't be traded off against each other.**
+
+- **Guardrail metric — missed-escalation rate.** Target: as close to 0% as measurable. This is never traded off for a better-looking average; a system that improves overall precision by occasionally missing a genuine red-flag query has made things worse, not better, regardless of what the aggregate number says.
+- **Quality metrics** — escalation precision, category-match precision by cascade layer, resolution rate, guided-flow abandonment. These behave like normal product metrics: they can trade off against each other, they're expected to move as the taxonomy and thresholds are tuned, and "worse this week, better next week" is a normal part of iterating on them.
+
+This distinction, what a golden set actually is for this project, and worked examples of building and scoring one from this prototype's own taxonomy, are covered in full in **`EVAL-METHODOLOGY.md`** — written as a standalone reference rather than folded in here, since it's dense enough to want its own document.
+
+## 13. Open items / honestly unresolved
+
+- **The near-miss safety heuristic (§2) is still lexical, not semantic.** It closes the specific gap this project found (chest/breath-adjacent phrasing missing the exact-phrase list), but a fixed noun/modifier list will have its own blind spots for phrasing that doesn't use any listed word at all. It should be treated as one layer of defense that needs real query-log validation, not a solved problem.
+- **Product ranking is illustrative, not real** — the "Top match" / "Also relevant" badges in §10 demonstrate that order is a decision worth making visibly, but there's no actual ranking model, click data, or catalogue behind them.
 - **Safety-screen contact info** uses real, public, non-emergency-specific German numbers (116117 pharmacist/medical helpline, 112 emergency) rather than a fabricated Redcare hotline — chosen deliberately to avoid citing a fictional company contact as if it were real, while still reading as authentic rather than a bracketed placeholder.
 - **HWG Annex A audit is illustrative, not exhaustive** — only 2 of the 52 taxonomy phrases were explicitly checked against it. A real taxonomy of any size would need a systematic pass, ideally with legal, before shipping.
 - **The "Herzschmerzen"-style ambiguity problem is only partially solved.** The guided flow narrows by duration and one follow-up question — it doesn't yet distinguish cardiac-plausible presentations from clearly-not-cardiac ones within the "chest/heart-adjacent" bucket. A real implementation would likely want a dedicated, more conservative sub-flow for anything chest/heart-adjacent rather than folding it into the general joint/muscle bucket.
