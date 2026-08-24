@@ -25,6 +25,28 @@
     line-height:1.5;
   }
   .app{max-width:760px; margin:0 auto; padding:32px 20px 80px;}
+
+  .tabs{display:flex; gap:0; margin-bottom:28px; border-bottom:1px solid var(--line);}
+  .tab-btn{font-family:var(--sans); font-weight:600; font-size:0.92rem; background:none; border:none; padding:10px 4px; margin-right:24px; cursor:pointer; color:var(--ink-soft); border-bottom:2px solid transparent;}
+  .tab-btn:hover{color:var(--teal-700);}
+  .tab-btn.active{color:var(--teal-900); border-bottom-color:var(--teal-900);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .clear-search{display:none; font-family:var(--sans); font-size:0.85rem; background:none; border:1px solid var(--line); border-radius:8px; padding:8px 14px; cursor:pointer; color:var(--ink-soft); margin-bottom:22px;}
+  .clear-search:hover{border-color:var(--teal-500); color:var(--teal-700);}
+  .clear-search.visible{display:inline-flex; align-items:center; gap:6px;}
+
+  .writeup-content{max-width:660px;}
+  .writeup-content h1{font-family:var(--serif); font-weight:600; font-size:1.6rem; color:var(--teal-900); margin:0 0 4px; line-height:1.2;}
+  .writeup-content .meta{font-size:0.85rem; color:var(--ink-soft); margin-bottom:22px; line-height:1.7;}
+  .writeup-content .meta a{color:var(--teal-700);}
+  .writeup-content p{margin:0 0 16px; font-size:0.96rem;}
+  .writeup-content table{width:100%; border-collapse:collapse; margin:0 0 20px; font-size:0.85rem;}
+  .writeup-content th,.writeup-content td{border:1px solid var(--line); padding:8px 10px; text-align:left;}
+  .writeup-content th{background:var(--teal-100); color:var(--teal-900); font-family:var(--mono); font-size:0.68rem; text-transform:uppercase; letter-spacing:.04em;}
+  .writeup-content hr{border:none; border-top:1px solid var(--line); margin:26px 0;}
+  .writeup-content a{color:var(--teal-700);}
   header.top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; gap:12px; flex-wrap:wrap;}
   .brand{font-family:var(--serif); font-weight:600; font-size:1.5rem; color:var(--teal-900); letter-spacing:-0.01em;}
   .brand small{display:block; font-family:var(--sans); font-weight:500; font-size:0.7rem; color:var(--ink-soft); letter-spacing:.06em; text-transform:uppercase; margin-top:2px;}
@@ -125,40 +147,82 @@
 <body>
 <div class="app">
 
-  <header class="top">
-    <div class="brand">Redcare<small>Symptom Discovery — Prototype</small></div>
-    <div class="scope-note">Scoped to Germany · Rx-enabled market</div>
-  </header>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnPrototype" onclick="showTab('prototype')">Prototype</button>
+    <button class="tab-btn" id="tabBtnWriteup" onclick="showTab('writeup')">Case Study Write-up</button>
+  </div>
 
-  <h1 class="headline">What's going on?</h1>
-  <p class="sub">Describe a symptom, or search a product name — try one of the examples below, or type your own.</p>
+  <div id="tab-prototype" class="tab-panel active">
 
-  <button class="metrics-toggle" onclick="toggleMetrics()">📊 View quality metrics (illustrative)</button>
-  <div class="metrics-panel" id="metrics">
-    <div class="m-title">Quality &amp; safety metrics — mocked for this prototype</div>
-    <div class="metrics-grid">
-      <div class="metric-row guardrail"><span>Missed-escalation rate (guardrail)</span><span class="m-val">0.0% (target)</span></div>
-      <div class="metric-row"><span>Escalation precision</span><span class="m-val">~68%</span></div>
-      <div class="metric-row"><span>Resolution rate (no escalation/referral)</span><span class="m-val">~91%</span></div>
-      <div class="metric-row"><span>Category-match precision (layers 3–5)</span><span class="m-val">~84%</span></div>
-      <div class="metric-row"><span>Guided-flow abandonment</span><span class="m-val">~12%</span></div>
-      <div class="metric-row"><span>Conversion delta vs. direct search</span><span class="m-val">TBD — needs A/B</span></div>
+    <header class="top">
+      <div class="brand">Redcare<small>Symptom Discovery — Prototype</small></div>
+      <div class="scope-note">Scoped to Germany · Rx-enabled market</div>
+    </header>
+
+    <h1 class="headline">What's going on?</h1>
+    <p class="sub">Describe a symptom, or search a product name — try one of the examples below, or type your own.</p>
+
+    <div class="search-row">
+      <input id="q" type="text" placeholder="e.g. &quot;I can't sleep&quot; or &quot;ibuprofen&quot;" autocomplete="off">
+      <button class="go" onclick="runSearch()">Search</button>
     </div>
-    <div class="m-note">These numbers are illustrative, not measured — there's no real traffic behind this prototype. What matters is the <i>shape</i>: a guardrail metric (near-zero tolerance, monitored, never traded off) sitting alongside quality metrics (normal precision/recall trade-offs apply). See <b>EVAL-METHODOLOGY.md</b> in the repo for how each of these would actually be built and measured, with worked examples from this taxonomy.</div>
+
+    <button class="clear-search" id="clearBtn" onclick="doReset()">✕ Clear search — start a new search</button>
+
+    <div class="chips" id="chips"></div>
+
+    <section id="result"></section>
+
+    <button class="metrics-toggle" onclick="toggleMetrics()">📊 View quality metrics (illustrative)</button>
+    <div class="metrics-panel" id="metrics">
+      <div class="m-title">Quality &amp; safety metrics — mocked for this prototype</div>
+      <div class="metrics-grid">
+        <div class="metric-row guardrail"><span>Missed-escalation rate (guardrail)</span><span class="m-val">0.0% (target)</span></div>
+        <div class="metric-row"><span>Escalation precision</span><span class="m-val">~68%</span></div>
+        <div class="metric-row"><span>Resolution rate (no escalation/referral)</span><span class="m-val">~91%</span></div>
+        <div class="metric-row"><span>Category-match precision (layers 3–5)</span><span class="m-val">~84%</span></div>
+        <div class="metric-row"><span>Guided-flow abandonment</span><span class="m-val">~12%</span></div>
+        <div class="metric-row"><span>Conversion delta vs. direct search</span><span class="m-val">TBD — needs A/B</span></div>
+      </div>
+      <div class="m-note">These numbers are illustrative, not measured — there's no real traffic behind this prototype. What matters is the <i>shape</i>: a guardrail metric (near-zero tolerance, monitored, never traded off) sitting alongside quality metrics (normal precision/recall trade-offs apply). See the <b>Case Study Write-up</b> tab for a link to <b>EVAL-METHODOLOGY.md</b>, where each of these would actually be built and measured, with worked examples from this taxonomy.</div>
+    </div>
+
+    <footer>
+      Prototype for Redcare case study · Not a real product, no medical claims made · routing logic is fully client-side and deterministic
+    </footer>
   </div>
 
-  <div class="search-row">
-    <input id="q" type="text" placeholder="e.g. &quot;I can't sleep&quot; or &quot;ibuprofen&quot;" autocomplete="off">
-    <button class="go" onclick="runSearch()">Search</button>
+  <div id="tab-writeup" class="tab-panel">
+    <div class="writeup-content">
+      <h1>Symptom-to-Product Discovery — Case Study Write-up</h1>
+      <div class="meta">
+        <b>Prototype:</b> this page (see the "Prototype" tab)<br>
+        <b>Design decisions &amp; diagrams:</b> <a href="https://github.com/emrefisek/SymptomSearch/blob/main/DESIGN-DECISIONS.md" target="_blank" rel="noopener">DESIGN-DECISIONS.md</a><br>
+        <b>Eval methodology:</b> <a href="https://github.com/emrefisek/SymptomSearch/blob/main/EVAL-METHODOLOGY.md" target="_blank" rel="noopener">EVAL-METHODOLOGY.md</a>
+      </div>
+      <hr>
+
+      <p>Today, searching "I can't sleep" on Redcare returns a standard keyword results page — mostly melatonin, ranked by popularity. There's no experience for a customer who arrives with a problem rather than a product in mind. Rather than building a single "symptom search," I built <b>intent routing</b>: a deterministic cascade that recognizes different query types need fundamentally different treatment, and only applies guided discovery where it actually helps.</p>
+
+      <table>
+        <tr><th>Layer</th><th>Fires on</th><th>Outcome</th></tr>
+        <tr><td>1 — Safety</td><td>Red-flag phrase (e.g. "chest pain")</td><td>Hard-stop escalation — never a product, overrides everything below</td></tr>
+        <tr><td>2 — Catalogue</td><td>Known brand/ingredient (e.g. "ibuprofen")</td><td>Direct results, no guidance</td></tr>
+        <tr><td>3 — Short symptom</td><td>Well-known single-cause term (e.g. "sunburn")</td><td>Light category route, escape hatch to guided flow</td></tr>
+        <tr><td>4 — Long-form</td><td>Natural-language problem (e.g. "I can't sleep")</td><td>Guided flow, 1–2 clarifying questions</td></tr>
+        <tr><td>5 — Ambiguous</td><td>Short, under-specified (e.g. "pain")</td><td>Guided flow, broader initial question</td></tr>
+      </table>
+
+      <p><b>The decision I'm most proud of</b> is this layered cascade, paired with a visible <b>routing-trace panel</b> — every result shows <i>which layer handled the query and why</i>, live on screen, which turns the architecture into something demonstrable rather than only explained. Two real failures on the live Shop Apotheke site motivated it: "Herzinfarkt" (heart attack) resolves straight to products with zero escalation, and "Herzschmerzen" (heart pain — cardiac, muscular, anxiety, or reflux are all plausible) resolves <i>confidently</i> to aspirin instead of asking one question first. That principle got tested against my own build: an early safety layer used only exact-phrase matching, so real phrasing like "my chest feels really tight" fell straight through it. The fix — a second, deliberately high-recall check (risk-area word + risk modifier) that escalates even without an exact match — is now in the prototype, demoable side-by-side with the original list.</p>
+
+      <p><b>The biggest trade-off I made</b> was breadth of taxonomy over depth of questioning — 52 phrases across five categories, but only two clarifying questions per guided flow. Right for demonstrating the architecture, not yet deep enough to trust past a demo. Two further trade-offs worth naming: <i>ranking</i> within a category is illustrative, not real ("Top match"/"Also relevant" labels with a mock rule, since there's no click data to rank against) — and I deliberately didn't tackle attribute extraction (form, dosage, audience embedded in a query) or the commercial question of whether routing customers <i>away</i> from a purchase is net-positive versus today's baseline. That last one needs a real A/B test, not an assumption.</p>
+
+      <p><b>What I'd do differently with more time</b> is build the eval pipeline before shipping, and be precise about what kind of metric each number is. Missed-escalation rate is a <i>guardrail</i> — target ~0%, never traded off for a better average elsewhere. Escalation precision, category-match precision, and resolution rate are normal <i>quality</i> metrics, expected to move as the system tunes. Conflating the two is how a safety layer quietly gets weakened for a cleaner dashboard. Full method and worked examples in <a href="https://github.com/emrefisek/SymptomSearch/blob/main/EVAL-METHODOLOGY.md" target="_blank" rel="noopener">EVAL-METHODOLOGY.md</a>.</p>
+
+      <p>One scoping choice worth naming: I scoped this to Germany, Redcare's largest market and one of only three where prescription medicines are sold — which justifies a fourth resolution path ("this may need a prescription"). It also grounds the prototype in HWG (Heilmittelwerbegesetz): <b>§12</b> restricts advertising referencing certain diseases (Annex A) to the public, and <b>§11</b> bans fear-inducing disease framing, which is why the escalation screen's tone is deliberately calm and factual. To be precise about weight: the primary reason the two HWG-flagged queries resolve to a referral is clinical judgment, not the statute — I applied the §12 label as a worked example on two terms, not a complete audit or legal conclusion.</p>
+    </div>
   </div>
 
-  <div class="chips" id="chips"></div>
-
-  <section id="result"></section>
-
-  <footer>
-    Prototype for Redcare case study · Not a real product, no medical claims made · routing logic is fully client-side and deterministic
-  </footer>
 </div>
 
 <script>
@@ -320,6 +384,13 @@ function route(raw){
 const resultEl = document.getElementById("result");
 let state = {};
 
+function showTab(name){
+  document.getElementById("tab-prototype").classList.toggle("active", name === "prototype");
+  document.getElementById("tab-writeup").classList.toggle("active", name === "writeup");
+  document.getElementById("tabBtnPrototype").classList.toggle("active", name === "prototype");
+  document.getElementById("tabBtnWriteup").classList.toggle("active", name === "writeup");
+}
+
 function buildChips(){
   const groups = [
     ["Safety (red-flag)", REDFLAG.slice(0,3), "rf"],
@@ -366,6 +437,8 @@ function runSearch(){
   const r = route(raw);
   state = {raw, r};
   render();
+  document.getElementById("chips").style.display = "none";
+  document.getElementById("clearBtn").classList.add("visible");
 }
 
 function traceHTML(trace, extra){
@@ -545,6 +618,8 @@ function doReset(){
   resultEl.style.display = "none";
   resultEl.innerHTML = "";
   state = {};
+  document.getElementById("chips").style.display = "flex";
+  document.getElementById("clearBtn").classList.remove("visible");
   document.getElementById("q").focus();
 }
 
