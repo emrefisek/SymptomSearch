@@ -459,8 +459,8 @@ function render(){
     const nearMissNote = r.nearMiss ? `<div class="callout"><b>Design decision — near-miss recall</b>This didn't match the curated red-flag phrase list exactly — it was caught by a looser heuristic (risk-area word + risk modifier) that exists specifically because a fixed phrase list will always miss real phrasing. Safety is the one layer where over-triggering is the correct failure mode, not a bug to tune away.</div>` : "";
     resultEl.innerHTML = traceHTML(r.trace) + `
       <div class="escalation">
-        <h2>This needs a pharmacist or doctor, not a product list</h2>
-        <p>What you've described is best assessed by a professional rather than an online search. Please reach out to a pharmacist, or a doctor if you'd feel more comfortable.</p>
+        <h2>This needs a healthcare professional, not a product list</h2>
+        <p>What you've described is best assessed by a professional rather than an online search. Please reach out to a healthcare provider — please don't wait to find out.</p>
         <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b><br>Medical emergency: <b>112</b></div>
       </div>
       <div class="callout"><b>Design decision</b>Hard-coded, non-probabilistic safety check — a false negative here is a safety failure, not a UX inconvenience. Tone is deliberately calm and factual, aligned with HWG §11's ban on fear-inducing disease framing, not just a UX preference.</div>
@@ -533,7 +533,7 @@ function render(){
   if (r.outcome === "resolved"){
     const bucket = BUCKETS[r.item.bucket];
     const nudge = r.duration === "2weeks" ? `
-      <div class="nudge"><span>⚑</span><div><b>This has been going on a while.</b> If it persists much longer, it's worth having a pharmacist take a look — we'll still show you relevant options below, not silence.</div></div>` : "";
+      <div class="nudge"><span>⚑</span><div><b>This has been going on a while.</b> If it persists much longer, it's worth having a healthcare professional take a look — we'll still show you relevant options below, not silence.</div></div>` : "";
     resultEl.innerHTML = traceHTML(r.trace, r.traceExtra) + nudge + `
       <div class="panel">
         <h2>${bucket.cat}</h2>
@@ -551,8 +551,8 @@ function render(){
   if (r.outcome === "referral"){
     resultEl.innerHTML = traceHTML(r.trace, r.traceExtra) + `
       <div class="referral">
-        <h2>This needs a pharmacist or doctor's judgment</h2>
-        <p>This isn't something we can responsibly answer with a product recommendation — please speak with a pharmacist or doctor directly. That's not a limitation of this prototype; it's a deliberate boundary.</p>
+        <h2>This needs a doctor's judgment</h2>
+        <p>This isn't something we can responsibly answer with a product recommendation — please speak with a doctor or pharmacist directly. That's not a limitation of this prototype; it's a deliberate boundary.</p>
         <div class="contact">Pharmacist / non-emergency medical helpline: <b>116117</b></div>
       </div>
       <div class="callout"><b>Design decision</b>The primary reason for a referral here is clinical judgment, not a legal one — but this is also one of the taxonomy terms explicitly checked against ${r.item.hwg.article}, which restricts referencing this disease category in consumer-facing advertising in Germany. A useful additional consideration, not the load-bearing one.</div>
