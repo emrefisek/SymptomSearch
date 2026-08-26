@@ -156,6 +156,8 @@ Everything above is **offline eval**: scoring against a fixed golden set before 
 
 It cannot answer a different, equally important question: **is this feature good for the business?** That requires **online eval** — real users, real traffic, and an A/B test against the current keyword-search baseline. Conversion delta, guided-flow abandonment, and escalation precision require behavioral data. Return behavior 7–14 days after referral may be a useful signal, but is not proof of clinical correctness. The two evaluation modes are complementary: a feature can pass offline guardrails and still be commercially poor, or appear commercially attractive while retaining a golden-set-detectable safety defect. Online testing follows, rather than replaces, offline safety gates.
 
+![Evaluation architecture — offline evaluation (golden set, system run, scoring, release gate, split into guardrails and quality) alongside online evaluation (A/B test, behavioral signals, business impact); offline asks whether behavior is correct enough to ship, online asks whether it improves outcomes](assets/eval-architecture.png)
+
 ## 8. Summary table — what to track, and what kind of number each one is
 
 | Metric | Type | Target / behavior | Source in this project |
